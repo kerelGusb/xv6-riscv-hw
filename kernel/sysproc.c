@@ -5,6 +5,7 @@
 #include "memlayout.h"
 #include "spinlock.h"
 #include "proc.h"
+#include "procinfo.h"
 
 uint64
 sys_exit(void)
@@ -91,3 +92,54 @@ sys_uptime(void)
   release(&tickslock);
   return xticks;
 }
+
+extern struct spinlock wait_lock;
+
+uint64
+sys_ps_listinfo(void) {
+    uint64 uaddr;
+    int lim;
+    struct procinfo pinfo;
+    struct proc *p;
+    int count = 0;
+    argaddr(0, &uaddr);
+    argint(1, &lim);
+    int proc_count = 0;
+
+    if (uaddr == 0) {
+      for (p = proc; p < &proc[NPROC]; p++) {
+        acquire(&p->lock);
+        if (p->state != UNUSED)
+            proc_count++;
+        release(&p->lock);
+      }
+      return proc_count;
+    }
+
+    if (proc_count > lim)
+        return -proc_count;
+
+    acquire(&wait_lock);
+    for (p = proc; p < &proc[NPROC]; ++p) {
+        if (count >= lim) break;
+        acquire(&p->lock);
+        if (p->state != UNUSED) {
+            pinfo.pid = p->pid;
+            pinfo.ppid = p->parent ? p->parent->pid : 0;
+            pinfo.state = p->state;
+
+            safestrcpy(pinfo.name, p->name, sizeof(pinfo.name));
+            if (copyout(myproc()->pagetable, uaddr + count * sizeof(struct procinfo), (char *)&pinfo, sizeof(struct procinfo)) < 0) {
+                release(&p->lock);
+                release(&wait_lock);
+                return -2;
+            }
+            count++;
+        }
+        release(&p->lock);
+    }
+    release(&wait_lock);
+
+    return count;
+}
+
