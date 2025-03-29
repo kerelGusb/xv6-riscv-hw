@@ -107,38 +107,40 @@ sys_ps_listinfo(void) {
     int proc_count = 0;
 
     if (uaddr == 0) {
-      for (p = proc; p < &proc[NPROC]; p++) {
-        acquire(&p->lock);
-        if (p->state != UNUSED)
-            proc_count++;
-        release(&p->lock);
-      }
-      return proc_count;
+        for (p = proc; p < &proc[NPROC]; p++) {
+            acquire(&p->lock);
+            if (p->state != UNUSED && p->state != USED)
+                proc_count++;
+            release(&p->lock);
+        }
+        return proc_count;
     }
 
     if (proc_count > lim)
-        return -proc_count;
+        return lim + 1;
 
-    acquire(&wait_lock);
     for (p = proc; p < &proc[NPROC]; ++p) {
-        if (count >= lim) break;
+        if (count > lim) return lim + 1;
         acquire(&p->lock);
-        if (p->state != UNUSED) {
+        if (p->state != UNUSED && p->state != USED) {
             pinfo.pid = p->pid;
-            pinfo.ppid = p->parent ? p->parent->pid : 0;
+            if (p->parent) {
+                acquire(&p->parent->lock);
+                pinfo.ppid = p->parent->pid;
+                release(&p->parent->lock);
+            }
+            else pinfo.ppid = 0;
             pinfo.state = p->state;
 
             safestrcpy(pinfo.name, p->name, sizeof(pinfo.name));
             if (copyout(myproc()->pagetable, uaddr + count * sizeof(struct procinfo), (char *)&pinfo, sizeof(struct procinfo)) < 0) {
                 release(&p->lock);
-                release(&wait_lock);
-                return -2;
+                return -1;
             }
             count++;
         }
         release(&p->lock);
     }
-    release(&wait_lock);
 
     return count;
 }
