@@ -23,6 +23,8 @@ char* sbrk(int);
 int sleep(int);
 int uptime(void);
 int add(int a, int b);
+int vmprint(char* buf, uint64 len, int mask);
+int remflags(char* buf, uint64 len, int mask);
 
 // ulib.c
 int stat(const char*, struct stat*);
