@@ -59,6 +59,11 @@ void            ramdiskinit(void);
 void            ramdiskintr(void);
 void            ramdiskrw(struct buf*);
 
+// rtc.c
+uint32          rtc_read_low(void);
+uint32          rtc_read_high(void);
+uint64           read_rtc(void);
+
 // kalloc.c
 void*           kalloc(void);
 void            kfree(void *);
