@@ -29,7 +29,8 @@ OBJS = \
   $K/kernelvec.o \
   $K/plic.o \
   $K/virtio_disk.o \
-  $K/sysadd.o
+  $K/sysadd.o \
+  $K/rtc.o
 
 # riscv64-unknown-elf- or riscv64-linux-gnu-
 # perhaps in /opt/riscv/bin
@@ -142,7 +143,8 @@ UPROGS=\
 	$U/_zombie\
 	$U/_add\
 	$U/_add_rv\
-	$U/_add_util
+	$U/_add_util \
+	$U/_date
 
 fs.img: mkfs/mkfs README $(UPROGS)
 	mkfs/mkfs fs.img README $(UPROGS)
@@ -167,10 +169,13 @@ ifndef CPUS
 CPUS := 3
 endif
 
+RTC_DATE ?= localtime
+
 QEMUOPTS = -machine virt -bios none -kernel $K/kernel -m 128M -smp $(CPUS) -nographic
 QEMUOPTS += -global virtio-mmio.force-legacy=false
 QEMUOPTS += -drive file=fs.img,if=none,format=raw,id=x0
 QEMUOPTS += -device virtio-blk-device,drive=x0,bus=virtio-mmio-bus.0
+QEMUOPTS += -rtc base="$(RTC_DATE)"
 
 qemu: $K/kernel fs.img
 	$(QEMU) $(QEMUOPTS)

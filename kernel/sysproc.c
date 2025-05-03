@@ -91,3 +91,8 @@ sys_uptime(void)
   release(&tickslock);
   return xticks;
 }
+
+uint64
+sys_rtc(void) {
+  return (uint64)read_rtc();
+}
